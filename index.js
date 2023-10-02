@@ -1,8 +1,14 @@
 const parentContainer = document.querySelector(".main")
 const URL = "https://movies-app.prakashsakari.repl.co/api/movies";
 const searchInput = document.querySelector(".input");
+const movieRating = document.querySelector("#rating-select");
+const movieGenres = document.querySelector("#genre-select");
+
+
 let searchValue = "";
-let filteredArray =[];
+let filteredArrayOfMovies =[];
+let rating = 0;
+let selectedGenre = "";
 
 const getMovies = async (url) =>{
     
@@ -90,11 +96,90 @@ const createMoviesCard = (movies)=>{
     }
 }
 
-const getFilteredData = (event) =>{
-    searchValue = event.target.value;
-    
+const getFilteredData = () =>{
+    filteredArrayOfMovies = searchValue?.length>0 ? 
+    movies.filter((movie)=> movie.name.toLowerCase() === searchValue || 
+    searchValue === movie.director_name.toLowerCase() || 
+    movie.cast_name.toLowerCase().split(",").includes(searchValue)|| 
+    movie.writter_name.toLowerCase().split(",").includes(searchValue))
+    : movies;
+    //adding interconnectivity between genre & Rating with Input field
+    if((rating)>0){
+        filteredArrayOfMovies = searchValue?.length>0? filteredArrayOfMovies : movies;
+        filteredArrayOfMovies = filteredArrayOfMovies.filter((movie)=>(movie.imdb_rating)>=rating);
+    }
+    if(selectedGenre?.length >0){
+        filteredArrayOfMovies = searchValue?.length>0 || rating>7   ? filteredArrayOfMovies: movies;
+        filteredArrayOfMovies = filteredArrayOfMovies.filter((movie) => movie.genre.includes(selectedGenre));
+    }
+
+    return filteredArrayOfMovies;
 }
 
-searchInput.addEventListener("keyup", getFilteredData)
+const handleSearch = (event) =>{
+    //creating a search field
+    searchValue = event.target.value.toLowerCase();
+    let filterBySearch = getFilteredData();
+    parentContainer.innerHTML = "";
+    createMoviesCard(filterBySearch);
+    console.log("filtered Data",filterBySearch);
+}
+
+
+
+function debounce(callback, delay){
+    let timerId;
+    return (...args)=>{
+        clearTimeout(timerId);
+        timerId = setTimeout(()=>{
+            callback(...args);
+        },delay)
+    };
+}
+const handleRatingSelector = (event) =>{
+    rating = event.target.value;
+    let filterByRating = getFilteredData();
+    parentContainer.innerHTML = "";
+    createMoviesCard(rating ? filterByRating : movies);
+}
+const debounceInput = debounce(handleSearch, 500);
+
+searchInput.addEventListener("keyup", debounceInput);
+
+movieRating.addEventListener("change", handleRatingSelector);
+
+
+//Creating unique genre's array
+
+const genres = movies.reduce((acc, cur)=>{
+    let genresArr =[];
+    let tempGenresArr = cur.genre.split(",");
+    acc = [...acc, ...tempGenresArr];
+    for(let genre of acc){
+        if(!genresArr.includes(genre)){
+            genresArr = [...genresArr, genre];
+        }
+    }
+    return genresArr;
+},[]);
+
+//creating dynamic options dropdown
+
+for(let genre of genres){
+    const options = createElement("option");
+    options.classList.add("option");
+    options.setAttribute("value", genre);
+    options.innerText = genre;
+    movieGenres.appendChild(options)
+}
+
+const handleGenreSelect = (event) =>{
+    selectedGenre = event.target.value;
+    let filterByGenre = getFilteredData();
+    parentContainer.innerHTML = "";
+    createMoviesCard(selectedGenre ? filterByGenre : movies);
+}
+
+movieGenres.addEventListener("change", handleGenreSelect);
 
 createMoviesCard(movies);
